@@ -1,51 +1,53 @@
-[18:17:55] === BACKROOMS LOG STARTED ===
-[18:17:55] === Backrooms - VHS ===
-[18:17:55] Seed: 1793546275
-[18:17:57] OpenGL Version: 3.3.0 - Build 31.0.101.5590
-[18:17:57] GLSL Version:   3.30 - Build 31.0.101.5590
-[18:17:57] [INFO] RelativeMouseMode enabled
-[18:17:57] [Spawn] Safe point at (14.5, 14.5)
-[18:17:57] [Renderer] Initializing...
-[18:17:57] [Shader] Successfully compiled and linked.
-[18:17:57] [Shader] Successfully compiled and linked.
-[18:17:57] [Renderer] Init OK
-[18:17:57] [Audio] Initializing miniaudio engine...
-[18:17:58] [Audio] Loaded and started lamp.wav
-[18:17:58] [Audio] Loaded assets/sounds/walk/walk_01.wav
-[18:17:58] [Audio] Loaded assets/sounds/walk/walk_02.wav
-[18:17:58] [Audio] Loaded assets/sounds/walk/walk_03.wav
-[18:17:58] [Audio] Loaded click_on.wav
-[18:17:58] [Audio] Loaded click_off.wav
-[18:17:58] [Audio] Initialized successfully
-[18:17:58] [Window] Resized to 1024x768
-[18:18:01] [Debug] Chunk Borders (F3+G): ON
-[18:18:01] [Shader] Successfully compiled and linked.
-[18:18:02] [Debug] Chunk Borders (F3+G): OFF
-[18:18:05] [Debug] Hitboxes (F3+B): ON
-[18:18:08] [Game] Flashlight toggled: ON
-[18:18:09] [Game] Flashlight toggled: OFF
-[18:18:10] [Game] Flashlight toggled: ON
-[18:18:16] [World] Player moved to new chunk (-1, 0). Loading...
-[18:18:18] [World] Player moved to new chunk (-1, 1). Loading...
-[18:18:23] [World] Player moved to new chunk (-2, 1). Loading...
-[18:18:28] [World] Player moved to new chunk (-3, 1). Loading...
-[18:18:34] [World] Player moved to new chunk (-4, 1). Loading...
-[18:18:34] [Game] Flashlight toggled: OFF
-[18:18:35] [Game] Flashlight toggled: ON
-[18:18:47] [World] Player moved to new chunk (-4, 2). Loading...
-[18:18:48] [World] Player moved to new chunk (-4, 1). Loading...
-[18:18:52] [World] Player moved to new chunk (-5, 1). Loading...
-[18:18:53] [World] Player moved to new chunk (-5, 2). Loading...
-[18:18:57] [World] Player moved to new chunk (-5, 1). Loading...
-[18:18:58] [World] Player moved to new chunk (-6, 1). Loading...
-[18:19:02] [World] Player moved to new chunk (-6, 2). Loading...
-[18:19:04] [World] Player moved to new chunk (-7, 2). Loading...
-[18:19:09] [Debug] Hitboxes (F3+B): OFF
-[18:19:10] [Game] Flashlight toggled: OFF
-[18:19:14] [Game] Flashlight toggled: ON
-[18:19:14] [Game] Flashlight toggled: OFF
-[18:19:26] [Game] Paused. Click to resume.
-[18:19:26] [Renderer] Shutting down...
-[18:19:26] === Done ===
-[18:19:26] [Audio] Engine shut down
-[18:19:26] === BACKROOMS LOG ENDED ===
+[18:42:25] === BACKROOMS LOG STARTED ===
+[18:42:25] === Backrooms - VHS ===
+[18:42:25] Seed: 1793547745
+[18:42:27] OpenGL Version: 3.3.0 - Build 31.0.101.5590
+[18:42:27] GLSL Version:   3.30 - Build 31.0.101.5590
+[18:42:27] [INFO] RelativeMouseMode enabled
+[18:42:27] [Spawn] Safe point at (19.5, 11.5)
+[18:42:27] [Renderer] Initializing...
+[18:42:27] [Shader] Successfully compiled and linked.
+[18:42:27] [Shader] Successfully compiled and linked.
+[18:42:27] [Renderer] Init OK
+[18:42:28] [Audio] Initializing miniaudio engine...
+[18:42:28] [Audio] Loaded and started lamp.wav
+[18:42:28] [Audio] Loaded assets/sounds/walk/walk_01.wav
+[18:42:28] [Audio] Loaded assets/sounds/walk/walk_02.wav
+[18:42:28] [Audio] Loaded assets/sounds/walk/walk_03.wav
+[18:42:28] [Audio] Loaded click_on.wav
+[18:42:28] [Audio] Loaded click_off.wav
+[18:42:28] [Audio] Initialized successfully
+[18:42:28] [Window] Resized to 1024x768
+[18:42:30] [Game] Flashlight toggled: ON
+[18:42:32] [Game] Flashlight toggled: OFF
+[18:42:33] [Game] Flashlight toggled: ON
+[18:42:34] [Game] Flashlight toggled: OFF
+[18:42:34] [Game] Flashlight toggled: ON
+[18:42:34] [Game] Flashlight toggled: OFF
+[18:42:34] [Game] Flashlight toggled: ON
+[18:42:35] [Game] Flashlight toggled: OFF
+[18:42:35] [World] Player moved to new chunk (0, -1). Loading...
+[18:42:35] [Game] Flashlight toggled: ON
+[18:42:35] [Game] Flashlight toggled: OFF
+[18:42:35] [Game] Flashlight toggled: ON
+[18:42:36] [Game] Flashlight toggled: OFF
+[18:42:36] [Game] Flashlight toggled: ON
+[18:42:37] [Game] Flashlight toggled: OFF
+[18:42:39] [Game] Flashlight toggled: ON
+[18:42:40] [Game] Flashlight toggled: OFF
+[18:42:42] [Game] Flashlight toggled: ON
+[18:42:43] [World] Player moved to new chunk (-1, -1). Loading...
+[18:42:48] [Game] Flashlight toggled: OFF
+[18:42:48] [Game] Flashlight toggled: ON
+[18:42:49] [Game] Flashlight toggled: OFF
+[18:42:49] [Game] Flashlight toggled: ON
+[18:42:50] [Game] Flashlight toggled: OFF
+[18:42:50] [World] Player moved to new chunk (-2, -1). Loading...
+[18:42:52] [Game] Flashlight toggled: ON
+[18:42:53] [Game] Flashlight toggled: OFF
+[18:42:56] [World] Player moved to new chunk (-3, -1). Loading...
+[18:43:00] [Game] Paused. Click to resume.
+[18:43:01] [Renderer] Shutting down...
+[18:43:01] === Done ===
+[18:43:01] [Audio] Engine shut down
+[18:43:01] === BACKROOMS LOG ENDED ===
