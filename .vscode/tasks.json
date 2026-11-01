@@ -1,0 +1,48 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "cppbuild",
+            "label": "C/C++: g++.exe build Backrooms",
+            "command": "C:/Users/gasga/AppData/Local/Microsoft/WinGet/Packages/BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe/mingw64/bin/g++.exe",
+            "args": [
+                "-fdiagnostics-color=always",
+                "-g",
+                "${workspaceFolder}/src/main.cpp",
+                "${workspaceFolder}/src/audio/audio.cpp",
+                "${workspaceFolder}/src/player/player.cpp",
+                "${workspaceFolder}/src/player/camera.cpp",
+                "${workspaceFolder}/src/render/renderer.cpp",
+                "${workspaceFolder}/src/render/shader.cpp",
+                "${workspaceFolder}/src/render/texture.cpp",
+                "${workspaceFolder}/src/render/mesh.cpp",
+                "${workspaceFolder}/src/render/mesh_builder.cpp",
+                "${workspaceFolder}/src/render/post_process.cpp",
+                "${workspaceFolder}/src/world/world.cpp",
+                "${workspaceFolder}/src/world/chunk.cpp",
+                "${workspaceFolder}/glad.c",
+                "${workspaceFolder}/lodepng.cpp",
+                "-o",
+                "${workspaceFolder}/backrooms.exe",
+                "-I", "${workspaceFolder}",
+                "-I", "${workspaceFolder}/include",
+                "-I", "${workspaceFolder}/src",
+                "-L", "${workspaceFolder}/lib",
+                "-lmingw32",
+                "-lSDL3",
+                "-lSDL3_ttf"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "detail": "Сборка всего проекта Backrooms"
+        }
+    ]
+}
