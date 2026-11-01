@@ -7,26 +7,38 @@
 //  Примитивы
 // ============================================================
 
-static void addWallQuad(std::vector<Vertex>& out,
-                        const glm::vec3& p0, const glm::vec3& p1,
-                        const glm::vec3& normal,
-                        float uStart, float uEnd,
-                        float vStart, float vEnd)
-{
+static void addWallQuad(std::vector<Vertex>& out, const glm::vec3& p0, const glm::vec3& p1,
+                        const glm::vec3& normal, float uStart, float uEnd, float vStart, float vEnd) {
     glm::vec3 bl = p0;
     glm::vec3 br = p1;
     glm::vec3 tl(bl.x, bl.y + CEIL_HEIGHT, bl.z);
     glm::vec3 tr(br.x, br.y + CEIL_HEIGHT, br.z);
 
-    out.push_back({ bl, normal, { uStart, vStart } });
-    out.push_back({ br, normal, { uEnd,   vStart } });
-    out.push_back({ tr, normal, { uEnd,   vEnd   } });
+    // Проверяем, куда смотрят треугольники относительно нормали
+    glm::vec3 edge1 = br - bl;
+    glm::vec3 edge2 = tl - bl;
+    glm::vec3 cross = glm::cross(edge1, edge2);
 
-    out.push_back({ tr, normal, { uEnd,   vEnd   } });
-    out.push_back({ tl, normal, { uStart, vEnd   } });
-    out.push_back({ bl, normal, { uStart, vStart } });
+    if (glm::dot(cross, normal) < 0.0f) {
+        // Если порядок неверный, разворачиваем треугольники (против часовой)
+        out.push_back({ bl, normal, { uStart, vStart } });
+        out.push_back({ tr, normal, { uEnd, vEnd } });
+        out.push_back({ br, normal, { uEnd, vStart } });
+
+        out.push_back({ tr, normal, { uEnd, vEnd } });
+        out.push_back({ tl, normal, { uStart, vEnd } });
+        out.push_back({ bl, normal, { uStart, vStart } });
+    } else {
+        // Если порядок верный, оставляем как было
+        out.push_back({ bl, normal, { uStart, vStart } });
+        out.push_back({ br, normal, { uEnd, vStart } });
+        out.push_back({ tr, normal, { uEnd, vEnd } });
+
+        out.push_back({ tr, normal, { uEnd, vEnd } });
+        out.push_back({ tl, normal, { uStart, vEnd } });
+        out.push_back({ bl, normal, { uStart, vStart } });
+    }
 }
-
 static void addHorizontalQuad(std::vector<Vertex>& out,
                               float x0, float x1,
                               float z0, float z1,
