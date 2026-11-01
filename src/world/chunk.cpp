@@ -5,10 +5,6 @@
 #include <cmath>
 #include <cstdint>
 
-// ============================================================
-//  Сид чанка
-// ============================================================
-
 unsigned int chunkSeed(unsigned int worldSeed, int cx, int cy) {
     uint32_t h = (uint32_t)worldSeed;
     h ^= (uint32_t)cx * 374761393u;
@@ -16,10 +12,6 @@ unsigned int chunkSeed(unsigned int worldSeed, int cx, int cy) {
     h = (h ^ (h >> 13)) * 1274126177u;
     return h ^ (h >> 16);
 }
-
-// ============================================================
-//  Хеш-функция [0, 1] по (x, y)
-// ============================================================
 
 static float hash01(int x, int y, unsigned seed) {
     uint32_t h = seed;
@@ -33,10 +25,6 @@ static float hash01(int x, int y, unsigned seed) {
 static float smoothstepf(float t) {
     return t * t * (3.0f - 2.0f * t);
 }
-
-// ============================================================
-//  Value Noise 2D — плавный шум
-// ============================================================
 
 static float valueNoise(float x, float y, unsigned seed) {
     int x0 = (int)std::floor(x);
@@ -57,112 +45,114 @@ static float valueNoise(float x, float y, unsigned seed) {
     return vx0 + (vx1 - vx0) * fy;
 }
 
-// ============================================================
-//  Определение биома для клетки — через шум
-// ============================================================
+BiomeType getBiomeForChunk(int cx, int cy, unsigned int worldSeed) {
+    const float scale = 0.15f;
+    float n = valueNoise(cx * scale, cy * scale, worldSeed ^ 0x12345u);
 
-BiomeType getBiomeAtCell(int wx, int wy, unsigned int worldSeed) {
-    const float scale = 1.0f / 18.0f;
-    float n = valueNoise(wx * scale, wy * scale, worldSeed ^ 0x12345u);
-
-    if (n < 0.14f) return BiomeType::VastEmpty;
-    if (n < 0.32f) return BiomeType::OpenHall;
-    if (n < 0.48f) return BiomeType::Pillars;
-    if (n < 0.62f) return BiomeType::LongCorridors;
-    if (n < 0.82f) return BiomeType::CorridorMaze;
-    return BiomeType::Cramped;
+    if (n < 0.20f) return BiomeType::OpenHall;
+    if (n < 0.45f) return BiomeType::Pillars;
+    if (n < 0.65f) return BiomeType::LongCorridors;
+    if (n < 0.85f) return BiomeType::CorridorMaze;
+    return BiomeType::DarkRoom;
 }
-
-// ============================================================
-//  Правило: пол или стена для клетки в её биоме
-// ============================================================
 
 static bool isFloorInBiome(BiomeType b, int wx, int wy, unsigned seed) {
     switch (b) {
-    case BiomeType::VastEmpty:
-            return true;
-
         case BiomeType::OpenHall: {
-            int gx = ((wx % 8) + 8) % 8;
-            int gy = ((wy % 8) + 8) % 8;
-            return !(gx == 0 && gy == 0);
+            // Классический Level 0. В основном открытое пространство, но с хаотичными стенами
+            float noise = valueNoise(wx * 0.1f, wy * 0.1f, seed);
+            if (noise > 0.7f) return false; // Случайная стена
+            return true;
         }
-
         case BiomeType::Pillars: {
-            int gx = ((wx % 14) + 14) % 14;
-            int gy = ((wy % 14) + 14) % 14;
-            bool pillar = (gx <= 1) && (gy <= 1);
+            // Зал с колоннами. Смещаем сетку, чтобы не было идеальных квадратов
+            int gx = ((wx + 2) % 16 + 16) % 16;
+            int gy = ((wy + 2) % 16 + 16) % 16;
+            bool pillar = (gx < 3) && (gy < 3);
             return !pillar;
         }
-
         case BiomeType::LongCorridors: {
-            int gx = ((wx % 9) + 9) % 9;
-            int gy = ((wy % 9) + 9) % 9;
-            bool hC = (gy < 2);
-            bool vC = (gx < 2);
-            return hC || vC;
+            // Длинные коридоры вдоль оси X или Z
+            float dir = valueNoise(wx * 0.02f, wy * 0.02f, seed ^ 0xABC);
+            if (dir < 0.5f) {
+                // Горизонтальные
+                int gy = ((wy % 12) + 12) % 12;
+                return (gy > 3 && gy < 8);
+            } else {
+                // Вертикальные
+                int gx = ((wx % 12) + 12) % 12;
+                return (gx > 3 && gx < 8);
+            }
         }
-
-         case BiomeType::CorridorMaze: {
-            int gx = ((wx % 4) + 4) % 4;
-            int gy = ((wy % 4) + 4) % 4;
-            bool hC = (gy == 0);
-            bool vC = (gx == 0);
-            bool extra = hash01(wx / 2, wy / 2, seed) > 0.65f;
-            return hC || vC || extra;
+        case BiomeType::CorridorMaze: {
+            // Тесный лабиринт
+            int gx = ((wx % 6) + 6) % 6;
+            int gy = ((wy % 6) + 6) % 6;
+            bool hC = (gy == 0 || gy == 1);
+            bool vC = (gx == 0 || gx == 1);
+            return (hC || vC);
         }
-
-        case BiomeType::Cramped: {
-            bool gridA = (wx % 3 == 0);
-            bool gridB = (wy % 3 == 0);
-            bool rnd = hash01(wx, wy, seed) < 0.15f;
-            return gridA || gridB || rnd;
+        case BiomeType::DarkRoom: {
+            // Темная комната
+            bool rnd = hash01(wx, wy, seed) < 0.1f;
+            return !rnd;
         }
     }
     return true;
 }
 
-// ============================================================
-//  Главная функция генерации чанка
-// ============================================================
-
-    Chunk generateChunk(unsigned int worldSeed, int cx, int cy) {
+Chunk generateChunk(unsigned int worldSeed, int cx, int cy) {
     Chunk c(cx, cy);
-
     int baseX = cx * CHUNK_SIZE;
-    int baseY = cy * CHUNK_SIZE;
+    int baseZ = cy * CHUNK_SIZE;
 
-    for (int ly = 0; ly < CHUNK_SIZE; ++ly) {
-        for (int lx = 0; lx < CHUNK_SIZE; ++lx) {
-            int wx = baseX + lx;
-            int wy = baseY + ly;
+    BiomeType biome = getBiomeForChunk(cx, cy, worldSeed);
 
-            BiomeType b = getBiomeAtCell(wx, wy, worldSeed);
-            bool floor = isFloorInBiome(b, wx, wy, worldSeed);
-            c.at(lx, ly) = floor ? 1 : 0;
+    for (int z = 0; z < CHUNK_SIZE; ++z) {
+        for (int x = 0; x < CHUNK_SIZE; ++x) {
+            int wx = baseX + x;
+            int wz = baseZ + z;
+            bool isFloorHere = isFloorInBiome(biome, wx, wz, worldSeed);
+
+            if (!isFloorHere) {
+                // Стены высотой 5 блоков
+                for (int y = 0; y < 5; ++y) c.at(x, y, z) = 1;
+            } else {
+                c.at(x, 0, z) = 1; // Пол
+
+                // Высота потолка 4 блока
+                c.at(x, 4, z) = 1;
+
+                // Воздух между полом и потолком
+                c.at(x, 1, z) = 0;
+                c.at(x, 2, z) = 0;
+                c.at(x, 3, z) = 0;
+
+                // Случайные препятствия (коробки/столы)
+                if (hash01(wx, wz, worldSeed ^ 0xBB) > 0.97f) {
+                     c.at(x, 1, z) = 1;
+                }
+                if (hash01(wx, wz, worldSeed ^ 0xCC) > 0.99f) {
+                     c.at(x, 1, z) = 1;
+                     c.at(x, 2, z) = 1;
+                }
+            }
         }
     }
 
-    // Гарантированные проходы на границах чанка
+    // Двери на границах (высотой 3 блока)
     for (int x = 0; x < CHUNK_SIZE; ++x) {
-        bool doorX = (x % 8 == 4) || (x % 8 == 5);
-        if (doorX) {
-            c.at(x, 0) = 1;
-            c.at(x, CHUNK_SIZE - 1) = 1;
+        if (x % 8 == 4 || x % 8 == 5) {
+            c.at(x, 1, 0) = 0; c.at(x, 2, 0) = 0; c.at(x, 3, 0) = 0;
+            c.at(x, 1, CHUNK_SIZE - 1) = 0; c.at(x, 2, CHUNK_SIZE - 1) = 0; c.at(x, 3, CHUNK_SIZE - 1) = 0;
         }
     }
-    for (int y = 0; y < CHUNK_SIZE; ++y) {
-        bool doorY = (y % 8 == 4) || (y % 8 == 5);
-        if (doorY) {
-            c.at(0, y) = 1;
-            c.at(CHUNK_SIZE - 1, y) = 1;
+    for (int z = 0; z < CHUNK_SIZE; ++z) {
+        if (z % 8 == 4 || z % 8 == 5) {
+            c.at(0, 1, z) = 0; c.at(0, 2, z) = 0; c.at(0, 3, z) = 0;
+            c.at(CHUNK_SIZE - 1, 1, z) = 0; c.at(CHUNK_SIZE - 1, 2, z) = 0; c.at(CHUNK_SIZE - 1, 3, z) = 0;
         }
     }
-
-    c.at(0, 0) = 0;
-    c.at(CHUNK_SIZE - 1, 0) = 0;
-    c.at(0, CHUNK_SIZE - 1) = 0;
-    c.at(CHUNK_SIZE - 1, CHUNK_SIZE - 1) = 0;
 
     return c;
 }
