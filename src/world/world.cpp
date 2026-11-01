@@ -93,6 +93,7 @@ static void buildLightPolygon(const World &world, Light &L) {
         float t = 0.0f;
 
         while (t < L.radius) {
+            // Проверяем стены на высоте 1
             if (world.isSolid(cx, 1, cz)) {
                 hitDist = std::min(t + 0.05f, L.radius);
                 break;
@@ -113,29 +114,26 @@ std::vector<Light> World::collectLights(float wx, float wy, float maxDist) const
 
     for (const auto &kv : chunks_) {
         const Chunk &c = kv.second;
-        if (getBiomeForChunk(c.cx, c.cy, worldSeed_) == BiomeType::DarkRoom) continue;
-
         int baseX = c.cx * CHUNK_SIZE;
         int baseZ = c.cy * CHUNK_SIZE;
 
-        for (int lz = 3; lz < CHUNK_SIZE - 3; lz += 6) {
-            for (int lx = 3; lx < CHUNK_SIZE - 3; lx += 6) {
-                // Проверяем, есть ли потолок на высоте 4
-                if (!c.isSolid(lx, 4, lz)) continue;
+        // Ищем блоки типа 2 (лампы) на потолке (Y=4)
+        for (int lz = 0; lz < CHUNK_SIZE; ++lz) {
+            for (int lx = 0; lx < CHUNK_SIZE; ++lx) {
+                if (c.at(lx, 4, lz) == 2) {
+                    float px = (float)(baseX + lx) + 0.5f;
+                    float pz = (float)(baseZ + lz) + 0.5f;
+                    float dx = px - wx, dz = pz - wy;
+                    if (dx * dx + dz * dz > maxDist2) continue;
 
-                float px = (float)(baseX + lx) + 0.5f;
-                float pz = (float)(baseZ + lz) + 0.5f;
-                float dx = px - wx, dz = pz - wy;
-                if (dx * dx + dz * dz > maxDist2) continue;
-
-                Light L;
-                // Лампа висит под потолком (Y=3.95)
-                L.position = glm::vec3(px, 3.95f, pz);
-                L.color = glm::vec3(1.0f, 0.92f, 0.65f);
-                L.radius = 9.0f;
-                L.intensity = 1.6f;
-                L.flicker = 1.0f;
-                result.push_back(L);
+                    Light L;
+                    L.position = glm::vec3(px, 3.95f, pz);
+                    L.color = glm::vec3(1.0f, 0.92f, 0.65f);
+                    L.radius = 15.0f;    // Было 10.0. Радиус света теперь больше
+                    L.intensity = 2.5f;  // Было 1.6. Свет стал ярче
+                    L.flicker = 1.0f;
+                    result.push_back(L);
+                }
             }
         }
     }

@@ -1,10 +1,11 @@
+// src/world/chunk.h
 #pragma once
 
 #include <cstdint>
 #include <vector>
 #include "core/types.h"
 
-constexpr int CHUNK_HEIGHT = 32; // Высота по Y
+constexpr int CHUNK_HEIGHT = 32;
 
 struct Chunk {
     int cx = 0;
@@ -22,9 +23,10 @@ struct Chunk {
         return blocks[(size_t)y * (CHUNK_SIZE * CHUNK_SIZE) + (size_t)z * CHUNK_SIZE + x];
     }
 
+    // 0 - воздух, 1 - обычный блок, 2 - лампа
     bool isSolid(int x, int y, int z) const {
         if (x < 0 || x >= CHUNK_SIZE || y < 0 || y >= CHUNK_HEIGHT || z < 0 || z >= CHUNK_SIZE) return false;
-        return at(x, y, z) == 1;
+        return at(x, y, z) > 0;
     }
 };
 

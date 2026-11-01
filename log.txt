@@ -1,21 +1,22 @@
-[19:39:45] === BACKROOMS LOG STARTED ===
-[19:39:45] === Backrooms - VHS ===
-[19:39:45] Seed: 1793551185
-[19:39:46] OpenGL Version: 3.3.0 - Build 31.0.101.5590
-[19:39:46] [Spawn] Safe point at (16.5, 16.5)
-[19:39:46] [Renderer] Initializing...
-[19:39:47] [Shader] Successfully compiled and linked.
-[19:39:47] [Shader] Successfully compiled and linked.
-[19:39:47] [Renderer] Init OK
-[19:39:47] [Audio] Initializing miniaudio engine...
-[19:39:48] [Audio] Loaded and started lamp.wav
-[19:39:48] [Audio] Loaded assets/sounds/walk/walk_01.wav
-[19:39:48] [Audio] Loaded assets/sounds/walk/walk_02.wav
-[19:39:48] [Audio] Loaded assets/sounds/walk/walk_03.wav
-[19:39:48] [Audio] Loaded click_on.wav
-[19:39:48] [Audio] Loaded click_off.wav
-[19:39:48] [Audio] Initialized successfully
-[19:44:10] [Renderer] Shutting down...
-[19:44:10] === Done ===
-[19:44:11] [Audio] Engine shut down
-[19:44:11] === BACKROOMS LOG ENDED ===
+[21:11:17] === BACKROOMS LOG STARTED ===
+[21:11:17] === Backrooms - VHS ===
+[21:11:17] Seed: 1793556677
+[21:11:18] OpenGL Version: 3.3.0 - Build 31.0.101.5590
+[21:11:18] [Spawn] Safe point at (16.5, 16.5)
+[21:11:18] [Renderer] Initializing...
+[21:11:18] [Shader] Successfully compiled and linked.
+[21:11:19] [Shader] Successfully compiled and linked.
+[21:11:19] [Renderer] Init OK
+[21:11:19] [Audio] Initializing miniaudio engine...
+[21:11:19] [Audio] Loaded and started lamp.wav
+[21:11:19] [Audio] Loaded assets/sounds/walk/walk_01.wav
+[21:11:19] [Audio] Loaded assets/sounds/walk/walk_02.wav
+[21:11:19] [Audio] Loaded assets/sounds/walk/walk_03.wav
+[21:11:19] [Audio] Loaded click_on.wav
+[21:11:19] [Audio] Loaded click_off.wav
+[21:11:19] [Audio] Initialized successfully
+[21:11:39] [Shader] Successfully compiled and linked.
+[21:12:20] [Renderer] Shutting down...
+[21:12:20] === Done ===
+[21:12:20] [Audio] Engine shut down
+[21:12:20] === BACKROOMS LOG ENDED ===

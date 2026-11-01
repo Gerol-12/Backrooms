@@ -80,7 +80,7 @@ void main() {
             float NdotL = max(dot(N, L), 0.0);
 
             float t = 1.0 - (dist / maxRadius);
-            float atten = t * t * t;
+            float atten = t * t;
 
             vec3 lampColor = uLightColor[i] * vec3(0.9, 1.0, 0.6);
 
