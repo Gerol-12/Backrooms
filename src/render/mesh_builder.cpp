@@ -39,7 +39,7 @@ MeshBuffers buildMeshForChunk(const World& world, int cx, int cy) {
                         addFace(out.lamp,
                             pos + glm::vec3(0, 0, s), pos + glm::vec3(s, 0, s), pos + glm::vec3(s, 0, 0), pos + glm::vec3(0, 0, 0),
                             glm::vec3(0, -1, 0),
-                            {wx, wz}, {wx + s * uvScale, wz}, {wx + s * uvScale, wz + s * uvScale}, {wx, wz + s * uvScale});
+                            {0.0f, 0.0f}, {1.0f, 0.0f}, {1.0f, 1.0f}, {0.0f, 1.0f});
                     }
                     continue;
                 }
