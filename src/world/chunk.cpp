@@ -91,15 +91,21 @@ static int getBlockType(BiomeType b, int wx, int wy, int y, unsigned seed) {
     // Логика для разных биомов
     switch (b) {
         case BiomeType::OpenHall: {
-            // Стены по краям комнат
-            if (localX == 0 || localZ == 0) {
-                // Делаем дверь в центре каждой стены
-                if ((localX == 0 && localZ >= 4 && localZ <= 7) ||
-                    (localZ == 0 && localX >= 4 && localX <= 7)) {
-                    isWall = false; // Тут дверь, стены нет
-                } else {
-                    isWall = true;
-                }
+            // Сетка комнат 12x12, но дверные проёмы зависят от seed.
+            // Решение привязано к мировым координатам, поэтому не зависит
+            // от того, в каком чанке генерируется участок.
+            if (localX == 0) {
+                const int roomX = (int)std::floor((float)wx / roomSize);
+                const int roomZ = (int)std::floor((float)wz / roomSize);
+                const bool doorway = hash01(roomX, roomZ, seed ^ 0x51A7u) > 0.28f;
+                const bool inOpening = localZ >= 5 && localZ <= 6;
+                isWall = !(doorway && inOpening);
+            } else if (localZ == 0) {
+                const int roomX = (int)std::floor((float)wx / roomSize);
+                const int roomZ = (int)std::floor((float)wz / roomSize);
+                const bool doorway = hash01(roomX, roomZ, seed ^ 0xA715u) > 0.28f;
+                const bool inOpening = localX >= 5 && localX <= 6;
+                isWall = !(doorway && inOpening);
             }
             break;
         }
@@ -121,11 +127,24 @@ static int getBlockType(BiomeType b, int wx, int wy, int y, unsigned seed) {
             break;
         }
         case BiomeType::CorridorMaze: {
-            // Мелкая сетка 4х4
-            int mazeSize = 4;
-            int mx = ((wx % mazeSize) + mazeSize) % mazeSize;
-            int mz = ((wy % mazeSize) + mazeSize) % mazeSize;
-            if (mx == 0 || mz == 0) isWall = true;
+            // Коридорная сетка с переменными проёмами.
+            // Стены идут по сетке 8x8, а решения о проходах вычисляются
+            // из мировых координат: результат одинаков на границах чанков.
+            const int mazeSize = 8;
+            const int mx = ((wx % mazeSize) + mazeSize) % mazeSize;
+            const int mz = ((wz % mazeSize) + mazeSize) % mazeSize;
+
+            if (mx == 0) {
+                const int wallX = (int)std::floor((float)wx / mazeSize);
+                const int segmentZ = (int)std::floor((float)wz / mazeSize);
+                const bool doorway = hash01(wallX, segmentZ, seed ^ 0xC031u) > 0.42f;
+                isWall = !(doorway && mz >= 3 && mz <= 4);
+            } else if (mz == 0) {
+                const int segmentX = (int)std::floor((float)wx / mazeSize);
+                const int wallZ = (int)std::floor((float)wz / mazeSize);
+                const bool doorway = hash01(segmentX, wallZ, seed ^ 0xC032u) > 0.42f;
+                isWall = !(doorway && mx >= 3 && mx <= 4);
+            }
             break;
         }
         case BiomeType::DarkRoom: {
