@@ -4,6 +4,8 @@
 #include <cstdio>
 #include <cstdint>
 #include <fstream>
+#include <iterator>
+#include <utility>
 #include <string>
 #include <vector>
 #include <glm/glm.hpp>
