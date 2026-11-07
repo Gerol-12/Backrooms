@@ -15,8 +15,8 @@ public:
     bool isWall(float fx, float fz) const;
 
     Chunk& ensureChunk(int cx, int cy);
-    void loadAround(float wx, float wy);
-    void unloadFarFrom(int ccx, int ccy);
+    void loadAround(float wx, float wy, int radius = VIEW_RADIUS);
+    void unloadFarFrom(int ccx, int ccy, int radius = VIEW_RADIUS);
 
     const Chunk* getChunk(int cx, int cy) const;
     const std::unordered_map<uint64_t, Chunk>& chunks() const { return chunks_; }
@@ -24,7 +24,8 @@ public:
     unsigned int seed() const { return worldSeed_; }
     static uint64_t key(int cx, int cy);
 
-    std::vector<Light> collectLights(float wx, float wy, float maxDist = 20.0f) const;
+    std::vector<Light> collectLights(float wx, float wy, float maxDist = 20.0f,
+                                     int maxCount = MAX_LIGHTS) const;
 
     bool findSpawn(float startX, float startY, float& outX, float& outY) const;
 
