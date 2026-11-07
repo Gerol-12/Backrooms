@@ -199,13 +199,13 @@ void Renderer::render(const World& world,
     shader_.setVec3("uCameraPos", glm::value_ptr(cameraPos));
 
 // Туман (делаем его чуть светлее и отодвигаем дальше)
-    glm::vec3 fogColor(0.2f, 0.18f, 0.1f);
+    glm::vec3 fogColor(0.17f, 0.16f, 0.13f);
     shader_.setVec3("uFogColor", glm::value_ptr(fogColor));
     shader_.setFloat("uFogStart", 5.0f);
-    shader_.setFloat("uFogEnd", 25.0f); // Было 15.0, теперь туман дальше
+    shader_.setFloat("uFogEnd", 22.0f);
 
     // Базовый свет (поднимаем, чтобы даже в тенях были видны очертания стен)
-    glm::vec3 ambient(0.25f, 0.23f, 0.15f); // Было 0.15
+    glm::vec3 ambient(0.17f, 0.16f, 0.13f);
     shader_.setVec3("uAmbient", glm::value_ptr(ambient));
     shader_.setFloat("uTime", timeSeconds);
 
