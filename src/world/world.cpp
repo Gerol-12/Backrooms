@@ -45,6 +45,7 @@ Chunk &World::ensureChunk(int cx, int cy) {
 
     Chunk c = generateChunk(worldSeed_, cx, cy);
     auto res = chunks_.emplace(k, std::move(c));
+    lightsDirty_ = true;
     return res.first->second;
 }
 
@@ -59,14 +60,20 @@ void World::loadAround(float wx, float wy) {
 }
 
 void World::unloadFarFrom(int ccx, int ccy) {
+    bool removed = false;
+
     for (auto it = chunks_.begin(); it != chunks_.end();) {
         const Chunk &c = it->second;
         if (std::abs(c.cx - ccx) > VIEW_RADIUS || std::abs(c.cy - ccy) > VIEW_RADIUS) {
             it = chunks_.erase(it);
+            removed = true;
         } else {
             ++it;
         }
     }
+
+    if (removed)
+        lightsDirty_ = true;
 }
 
 static void buildLightPolygon(const World &world, Light &L) {
@@ -109,43 +116,92 @@ static void buildLightPolygon(const World &world, Light &L) {
 }
 
 std::vector<Light> World::collectLights(float wx, float wy, float maxDist) const {
-    std::vector<Light> result;
-    const float maxDist2 = maxDist * maxDist;
+    // Rebuild the lamp index only when the loaded world changes.
+    if (lightsDirty_) {
+        cachedLights_.clear();
 
-    for (const auto &kv : chunks_) {
-        const Chunk &c = kv.second;
-        int baseX = c.cx * CHUNK_SIZE;
-        int baseZ = c.cy * CHUNK_SIZE;
+        for (const auto &kv : chunks_) {
+            const Chunk &c = kv.second;
+            const int baseX = c.cx * CHUNK_SIZE;
+            const int baseZ = c.cy * CHUNK_SIZE;
 
-        // Ищем блоки типа 2 (лампы) на потолке (Y=4)
-        for (int lz = 0; lz < CHUNK_SIZE; ++lz) {
-            for (int lx = 0; lx < CHUNK_SIZE; ++lx) {
-                if (c.at(lx, 4, lz) == 2) {
-                    float px = (float)(baseX + lx) + 0.5f;
-                    float pz = (float)(baseZ + lz) + 0.5f;
-                    float dx = px - wx, dz = pz - wy;
-                    if (dx * dx + dz * dz > maxDist2) continue;
+            for (int lz = 0; lz < CHUNK_SIZE; ++lz) {
+                for (int lx = 0; lx < CHUNK_SIZE; ++lx) {
+                    if (c.at(lx, 4, lz) != 2)
+                        continue;
 
-                    Light L;
-                    L.position = glm::vec3(px, 3.95f, pz);
-                    L.color = glm::vec3(1.0f, 0.92f, 0.65f);
-                    L.radius = 15.0f;    // Было 10.0. Радиус света теперь больше
-                    L.intensity = 2.5f;  // Было 1.6. Свет стал ярче
-                    L.flicker = 1.0f;
-                    result.push_back(L);
+                    const float px = static_cast<float>(baseX + lx) + 0.5f;
+                    const float pz = static_cast<float>(baseZ + lz) + 0.5f;
+
+                    Light light{};
+                    light.position = glm::vec3(px, 3.95f, pz);
+                    light.color = glm::vec3(1.0f, 0.92f, 0.65f);
+                    light.radius = 15.0f;
+                    light.intensity = 2.5f;
+                    light.flicker = 1.0f;
+                    light.polyCount = 0; // Zero means that the DDA polygon is not built yet.
+
+                    cachedLights_.push_back(light);
                 }
             }
         }
+
+        lightsDirty_ = false;
     }
 
-    std::sort(result.begin(), result.end(), [wx, wy](const Light &a, const Light &b) {
-        float ax = a.position.x - wx, az = a.position.z - wy;
-        float bx = b.position.x - wx, bz = b.position.z - wy;
-        return (ax * ax + az * az) < (bx * bx + bz * bz);
-    });
+    // Select the nearest lights each frame, without rescanning every block.
+    const float maxDist2 = maxDist * maxDist;
+    std::vector<size_t> candidates;
+    candidates.reserve(cachedLights_.size());
 
-    if ((int)result.size() > MAX_LIGHTS) result.resize(MAX_LIGHTS);
-    for (auto &L : result) buildLightPolygon(*this, L);
+    for (size_t i = 0; i < cachedLights_.size(); ++i) {
+        const Light &light = cachedLights_[i];
+        const float dx = light.position.x - wx;
+        const float dz = light.position.z - wy;
+
+        if (dx * dx + dz * dz <= maxDist2)
+            candidates.push_back(i);
+    }
+
+    const auto distanceLess = [&](size_t a, size_t b) {
+        const glm::vec3 &A = cachedLights_[a].position;
+        const glm::vec3 &B = cachedLights_[b].position;
+        const float ax = A.x - wx, az = A.z - wy;
+        const float bx = B.x - wx, bz = B.z - wy;
+        return ax * ax + az * az < bx * bx + bz * bz;
+    };
+
+    const size_t count = std::min(
+        candidates.size(),
+        static_cast<size_t>(MAX_LIGHTS)
+    );
+
+    if (count == 0)
+        return {};
+
+    if (candidates.size() > count) {
+        std::partial_sort(
+            candidates.begin(),
+            candidates.begin() + count,
+            candidates.end(),
+            distanceLess
+        );
+    } else {
+        std::sort(candidates.begin(), candidates.end(), distanceLess);
+    }
+
+    std::vector<Light> result;
+    result.reserve(count);
+
+    for (size_t i = 0; i < count; ++i) {
+        Light &light = cachedLights_[candidates[i]];
+
+        // DDA shadow rays are traced once per cached lamp.
+        if (light.polyCount == 0)
+            buildLightPolygon(*this, light);
+
+        result.push_back(light);
+    }
 
     return result;
 }
