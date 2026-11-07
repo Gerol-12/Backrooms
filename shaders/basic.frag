@@ -96,16 +96,18 @@ void main() {
             vec3 cameraToFrag = normalize(vWorldPos - uCameraPos);
             vec3 flashlightDir = normalize(uFlashlightDir);
             float spotEffect = dot(cameraToFrag, flashlightDir);
-            float spotIntensity = smoothstep(0.2, 0.85, spotEffect);
+            // Узкий, мягкий конус вместо почти равномерного освещения комнаты.
+            float spotIntensity = smoothstep(0.86, 0.97, spotEffect);
 
             if (spotIntensity > 0.0) {
                 float distToCam = length(uCameraPos - vWorldPos);
-                float attenuation = 1.0 / (1.0 + 0.03 * distToCam + 0.005 * distToCam * distToCam);
-                vec3 flashlightColor = vec3(1.0, 0.97, 0.88);
+                float attenuation = 1.0 / (1.0 + 0.06 * distToCam + 0.018 * distToCam * distToCam);
+                float rangeFade = 1.0 - smoothstep(13.0, 19.0, distToCam);
+                vec3 flashlightColor = vec3(1.0, 0.97, 0.90);
                 vec3 L = normalize(uCameraPos - vWorldPos);
                 float NdotL = max(dot(N, L), 0.0);
-                float lightAmount = NdotL * 0.7 + 0.3;
-                lighting += flashlightColor * spotIntensity * attenuation * lightAmount * 1.5;
+                float lightAmount = NdotL * 0.88 + 0.08;
+                lighting += flashlightColor * spotIntensity * attenuation * rangeFade * lightAmount * 1.25;
             }
         }
 
