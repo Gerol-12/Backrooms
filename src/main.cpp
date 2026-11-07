@@ -21,6 +21,7 @@ constexpr float FOV   = 75.0f;
 constexpr float NEAR  = 0.05f;
 constexpr float FAR   = 200.0f;
 constexpr float MOUSE_SENS = 0.08f;
+constexpr Uint64 TARGET_FPS = 60;
 
 int main(int argc, char** argv) {
     Logger::init();
@@ -81,7 +82,11 @@ int main(int argc, char** argv) {
     AudioManager audio; audio.init();
     float stepTimer = 0.0f;
 
+    const Uint64 performanceFrequency = SDL_GetPerformanceFrequency();
+    const Uint64 targetFrameTicks = performanceFrequency / TARGET_FPS;
+
     while (running) {
+        const Uint64 frameStart = SDL_GetPerformanceCounter();
         Uint64 now = SDL_GetTicks();
         float dt = (now - lastTime) / 1000.0f; lastTime = now;
         if (dt > 0.1f) dt = 0.1f;
@@ -141,6 +146,15 @@ int main(int argc, char** argv) {
 
         renderer.render(world, view, projection, player.camera().eyePosition(), vpW, vpH, timeSec, flashlightOn, currentFlashlightDir, showHitboxes, showChunkBorders);
         SDL_GL_SwapWindow(window);
+
+        // Cap CPU/GPU work to a stable 60 FPS instead of rendering uncapped.
+        const Uint64 frameElapsed = SDL_GetPerformanceCounter() - frameStart;
+        if (frameElapsed < targetFrameTicks) {
+            const Uint64 remainingTicks = targetFrameTicks - frameElapsed;
+            const Uint32 sleepMs = static_cast<Uint32>(
+                (remainingTicks * 1000ULL) / performanceFrequency);
+            if (sleepMs > 0) SDL_Delay(sleepMs);
+        }
 
         frameCount++;
         if (now - fpsTimer > 1000) {
