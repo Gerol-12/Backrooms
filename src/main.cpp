@@ -10,6 +10,7 @@
 #include "render/renderer.h"
 #include "player/player.h"
 #include "audio/audio.h"
+#include "core/graphics_settings.h"
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
@@ -21,7 +22,7 @@ constexpr float FOV   = 75.0f;
 constexpr float NEAR  = 0.05f;
 constexpr float FAR   = 200.0f;
 constexpr float MOUSE_SENS = 0.08f;
-constexpr Uint64 TARGET_FPS = 60;
+
 
 int main(int argc, char** argv) {
     Logger::init();
@@ -42,9 +43,13 @@ int main(int argc, char** argv) {
     SDL_GLContext glContext = SDL_GL_CreateContext(window);
     if (!glContext) { LOG("SDL_GL_CreateContext failed"); SDL_DestroyWindow(window); SDL_Quit(); Logger::close(); return 1; }
 
-    // Prefer monitor synchronization; keep the software 60 FPS cap as a fallback.
-    const bool vsyncEnabled = SDL_GL_SetSwapInterval(1);
-    LOG("VSync: %s", vsyncEnabled ? "enabled" : "unavailable (using 60 FPS cap)");
+    GraphicsSettings graphicsSettings = GraphicsSettings::load();
+    // Prefer the configured monitor synchronization; retain a frame cap as fallback.
+    const bool vsyncEnabled = graphicsSettings.vsync && SDL_GL_SetSwapInterval(1);
+    LOG("Graphics settings: FPS=%d, VSync=%s, view distance=%d, lighting=%d, VHS=%d",
+        graphicsSettings.maxFps, vsyncEnabled ? "enabled" : "disabled",
+        graphicsSettings.viewDistance, graphicsSettings.lightingQuality, graphicsSettings.vhsQuality);
+    if (!graphicsSettings.vsync) SDL_GL_SetSwapInterval(0);
     if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) { LOG("glad failed"); SDL_GL_DestroyContext(glContext); SDL_DestroyWindow(window); SDL_Quit(); Logger::close(); return 1; }
 
     LOG("OpenGL Version: %s", glGetString(GL_VERSION));
@@ -87,7 +92,7 @@ int main(int argc, char** argv) {
     float stepTimer = 0.0f;
 
     const Uint64 performanceFrequency = SDL_GetPerformanceFrequency();
-    const Uint64 targetFrameTicks = performanceFrequency / TARGET_FPS;
+    const Uint64 targetFrameTicks = performanceFrequency / static_cast<Uint64>(graphicsSettings.maxFps);
 
     while (running) {
         const Uint64 frameStart = SDL_GetPerformanceCounter();
@@ -151,8 +156,8 @@ int main(int argc, char** argv) {
         renderer.render(world, view, projection, player.camera().eyePosition(), vpW, vpH, timeSec, flashlightOn, currentFlashlightDir, showHitboxes, showChunkBorders);
         SDL_GL_SwapWindow(window);
 
-        // VSync already paces frames to the display. Use a software 60 FPS cap only
-        // when the driver/renderer cannot enable VSync, avoiding double-throttling.
+        // VSync paces frames to the display. If unavailable or disabled, use the
+        // configured 30/60 FPS software cap.
         if (!vsyncEnabled) {
             const Uint64 frameElapsed = SDL_GetPerformanceCounter() - frameStart;
             if (frameElapsed < targetFrameTicks) {
