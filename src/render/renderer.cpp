@@ -205,7 +205,7 @@ void Renderer::render(const World& world,
     shader_.setFloat("uFogEnd", 22.0f);
 
     // Базовый свет (поднимаем, чтобы даже в тенях были видны очертания стен)
-    glm::vec3 ambient(0.12f, 0.115f, 0.095f);
+    glm::vec3 ambient(0.085f, 0.080f, 0.066f);
     shader_.setVec3("uAmbient", glm::value_ptr(ambient));
     shader_.setFloat("uTime", timeSeconds);
 
@@ -298,15 +298,18 @@ void Renderer::render(const World& world,
     // --- DRAW PASS: keep material changes grouped to minimize state changes ---
     shader_.setInt("uTex", 0);
     shader_.setFloat("uEmissive", 0.0f);
+    shader_.setFloat("uMaterialLight", 0.78f);
 
     texFloor_.bind(0);
     for (const VisibleChunk &chunk : visibleChunks)
         chunk.mesh->floor.draw();
 
+    shader_.setFloat("uMaterialLight", 0.90f);
     texWall_.bind(0);
     for (const VisibleChunk &chunk : visibleChunks)
         chunk.mesh->wall.draw();
 
+    shader_.setFloat("uMaterialLight", 0.78f);
     texCeil_.bind(0);
     for (const VisibleChunk &chunk : visibleChunks)
         chunk.mesh->ceil.draw();
