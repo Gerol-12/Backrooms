@@ -49,22 +49,23 @@ Chunk &World::ensureChunk(int cx, int cy) {
     return res.first->second;
 }
 
-void World::loadAround(float wx, float wy) {
+void World::loadAround(float wx, float wy, int radius) {
     int ccx = (int)std::floor(wx / CHUNK_SIZE);
     int ccy = (int)std::floor(wy / CHUNK_SIZE);
-    for (int dy = -VIEW_RADIUS; dy <= VIEW_RADIUS; ++dy) {
-        for (int dx = -VIEW_RADIUS; dx <= VIEW_RADIUS; ++dx) {
+    radius = std::max(1, radius);
+    for (int dy = -radius; dy <= radius; ++dy) {
+        for (int dx = -radius; dx <= radius; ++dx) {
             ensureChunk(ccx + dx, ccy + dy);
         }
     }
 }
 
-void World::unloadFarFrom(int ccx, int ccy) {
+void World::unloadFarFrom(int ccx, int ccy, int radius) {
     bool removed = false;
 
     for (auto it = chunks_.begin(); it != chunks_.end();) {
         const Chunk &c = it->second;
-        if (std::abs(c.cx - ccx) > VIEW_RADIUS || std::abs(c.cy - ccy) > VIEW_RADIUS) {
+        if (std::abs(c.cx - ccx) > radius || std::abs(c.cy - ccy) > radius) {
             it = chunks_.erase(it);
             removed = true;
         } else {
@@ -115,7 +116,7 @@ static void buildLightPolygon(const World &world, Light &L) {
     }
 }
 
-std::vector<Light> World::collectLights(float wx, float wy, float maxDist) const {
+std::vector<Light> World::collectLights(float wx, float wy, float maxDist, int maxCount) const {
     // Rebuild the lamp index only when the loaded world changes.
     if (lightsDirty_) {
         cachedLights_.clear();
@@ -173,7 +174,7 @@ std::vector<Light> World::collectLights(float wx, float wy, float maxDist) const
 
     const size_t count = std::min(
         candidates.size(),
-        static_cast<size_t>(MAX_LIGHTS)
+        static_cast<size_t>(std::clamp(maxCount, 0, MAX_LIGHTS))
     );
 
     if (count == 0)
