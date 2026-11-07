@@ -10,6 +10,8 @@
 #include "render/renderer.h"
 #include "player/player.h"
 #include "audio/audio.h"
+#include "core/graphics_settings.h"
+#include "core/save_system.h"
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
@@ -22,12 +24,15 @@ constexpr float NEAR  = 0.05f;
 constexpr float FAR   = 200.0f;
 constexpr float MOUSE_SENS = 0.08f;
 
+
 int main(int argc, char** argv) {
     Logger::init();
     LOG("=== Backrooms - VHS ===");
-    unsigned int seed = (unsigned int)time(nullptr);
+    SaveData saveData;
+    const bool hasSave = (argc <= 1) && SaveSystem::Load(saveData);
+    unsigned int seed = hasSave ? saveData.worldSeed : (unsigned int)time(nullptr);
     if (argc > 1) seed = (unsigned int)atoi(argv[1]);
-    LOG("Seed: %u", seed);
+    LOG("Seed: %u%s", seed, hasSave ? " (loaded)" : "");
 
     if (!SDL_Init(SDL_INIT_VIDEO)) { LOG("SDL_Init failed: %s", SDL_GetError()); Logger::close(); return 1; }
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
@@ -40,6 +45,14 @@ int main(int argc, char** argv) {
     if (!window) { LOG("SDL_CreateWindow failed"); SDL_Quit(); Logger::close(); return 1; }
     SDL_GLContext glContext = SDL_GL_CreateContext(window);
     if (!glContext) { LOG("SDL_GL_CreateContext failed"); SDL_DestroyWindow(window); SDL_Quit(); Logger::close(); return 1; }
+
+    GraphicsSettings graphicsSettings = GraphicsSettings::load();
+    // Prefer the configured monitor synchronization; retain a frame cap as fallback.
+    const bool vsyncEnabled = graphicsSettings.vsync && SDL_GL_SetSwapInterval(1);
+    LOG("Graphics settings: FPS=%d, VSync=%s, view distance=%d, lighting=%d, VHS=%d",
+        graphicsSettings.maxFps, vsyncEnabled ? "enabled" : "disabled",
+        graphicsSettings.viewDistance, graphicsSettings.lightingQuality, graphicsSettings.vhsQuality);
+    if (!graphicsSettings.vsync) SDL_GL_SetSwapInterval(0);
     if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) { LOG("glad failed"); SDL_GL_DestroyContext(glContext); SDL_DestroyWindow(window); SDL_Quit(); Logger::close(); return 1; }
 
     LOG("OpenGL Version: %s", glGetString(GL_VERSION));
@@ -49,10 +62,13 @@ int main(int argc, char** argv) {
     SDL_RaiseWindow(window);
 
     World world(seed);
-    world.loadAround(16.5f, 16.5f);
+    if (hasSave) world.applyModifiedBlocks(saveData.modifiedBlocks);
+    const float initialX = hasSave ? saveData.playerPosition.x : 16.5f;
+    const float initialZ = hasSave ? saveData.playerPosition.z : 16.5f;
+    world.loadAround(initialX, initialZ, graphicsSettings.viewDistance);
 
-    float spawnX = 16.5f, spawnY = 16.5f;
-    if (world.findSpawn(16.5f, 16.5f, spawnX, spawnY)) {
+    float spawnX = initialX, spawnY = initialZ;
+    if (!hasSave && world.findSpawn(16.5f, 16.5f, spawnX, spawnY)) {
         LOG("[Spawn] Safe point at (%.1f, %.1f)", spawnX, spawnY);
     } else {
         LOG("[Spawn] WARN: no safe point found");
@@ -60,12 +76,16 @@ int main(int argc, char** argv) {
 
     Renderer renderer;
     if (!renderer.init("assets/")) { LOG("Renderer init failed"); return 1; }
+    renderer.setGraphicsSettings(graphicsSettings);
     renderer.resize(WIN_W, WIN_H);
 
     Player player;
-    player.camera().position().x = spawnX;
-    player.camera().position().y = 1.0f; // <--- Ноги на полу
-    player.camera().position().z = spawnY;
+    player.camera().position() = hasSave ? saveData.playerPosition : glm::vec3(spawnX, 1.0f, spawnY);
+    if (hasSave) {
+        player.camera().setYaw(saveData.yaw);
+        player.camera().setPitch(saveData.pitch);
+        LOG("Save loaded: %zu modified blocks", saveData.modifiedBlocks.size());
+    }
 
     int ccx = (int)std::floor(spawnX / CHUNK_SIZE);
     int ccy = (int)std::floor(spawnY / CHUNK_SIZE);
@@ -81,7 +101,11 @@ int main(int argc, char** argv) {
     AudioManager audio; audio.init();
     float stepTimer = 0.0f;
 
+    const Uint64 performanceFrequency = SDL_GetPerformanceFrequency();
+    const Uint64 targetFrameTicks = performanceFrequency / static_cast<Uint64>(graphicsSettings.maxFps);
+
     while (running) {
+        const Uint64 frameStart = SDL_GetPerformanceCounter();
         Uint64 now = SDL_GetTicks();
         float dt = (now - lastTime) / 1000.0f; lastTime = now;
         if (dt > 0.1f) dt = 0.1f;
@@ -124,8 +148,8 @@ int main(int argc, char** argv) {
         ccx = (int)std::floor(player.camera().position().x / CHUNK_SIZE);
         ccy = (int)std::floor(player.camera().position().z / CHUNK_SIZE);
         if (ccx != lastCCX || ccy != lastCCY) {
-            world.loadAround(player.camera().position().x, player.camera().position().z);
-            world.unloadFarFrom(ccx, ccy);
+            world.loadAround(player.camera().position().x, player.camera().position().z, graphicsSettings.viewDistance);
+            world.unloadFarFrom(ccx, ccy, graphicsSettings.viewDistance);
             renderer.updateAround(world, ccx, ccy);
             lastCCX = ccx; lastCCY = ccy;
         }
@@ -141,6 +165,18 @@ int main(int argc, char** argv) {
 
         renderer.render(world, view, projection, player.camera().eyePosition(), vpW, vpH, timeSec, flashlightOn, currentFlashlightDir, showHitboxes, showChunkBorders);
         SDL_GL_SwapWindow(window);
+
+        // VSync paces frames to the display. If unavailable or disabled, use the
+        // configured 30/60 FPS software cap.
+        if (!vsyncEnabled) {
+            const Uint64 frameElapsed = SDL_GetPerformanceCounter() - frameStart;
+            if (frameElapsed < targetFrameTicks) {
+                const Uint64 remainingTicks = targetFrameTicks - frameElapsed;
+                const Uint32 sleepMs = static_cast<Uint32>(
+                    (remainingTicks * 1000ULL) / performanceFrequency);
+                if (sleepMs > 0) SDL_Delay(sleepMs);
+            }
+        }
 
         frameCount++;
         if (now - fpsTimer > 1000) {
@@ -164,6 +200,17 @@ int main(int argc, char** argv) {
             frameCount = 0; fpsTimer = now;
         }
     }
+
+    SaveData finalSave;
+    finalSave.worldSeed = world.seed();
+    finalSave.playerPosition = player.camera().position();
+    finalSave.yaw = player.camera().yaw();
+    finalSave.pitch = player.camera().pitch();
+    finalSave.modifiedBlocks = world.modifiedBlocks();
+    if (SaveSystem::Save(finalSave))
+        LOG("Save written: %zu modified blocks", finalSave.modifiedBlocks.size());
+    else
+        LOG("WARNING: failed to write save.dat");
 
     SDL_SetWindowRelativeMouseMode(window, false);
     renderer.shutdown();

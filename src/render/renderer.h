@@ -12,6 +12,7 @@
 #include "render/mesh.h"
 #include "render/post_process.h"
 #include "world/world.h"
+#include "core/graphics_settings.h"
 
 class Renderer {
 public:
@@ -21,6 +22,7 @@ public:
     bool init(const std::string& assetsPath);
 
     void updateAround(const World& world, int ccx, int ccy);
+    void setGraphicsSettings(const GraphicsSettings& settings);
 
     void render(const World& world,
                 const glm::mat4& view,
@@ -50,6 +52,7 @@ private:
     std::unordered_map<uint64_t, ChunkMesh> meshes_;
 
     std::string assetsPath_;
+    GraphicsSettings settings_;
 
     void buildChunkMesh(const World& world, int cx, int cy);
     void drawDebugLines(const glm::mat4& view, const glm::mat4& projection, int ccx, int ccy);

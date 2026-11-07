@@ -23,6 +23,7 @@ public:
     void beginScene();
 
     void endSceneAndDraw(float time);
+    void setQuality(int quality) { quality_ = quality < 0 ? 0 : (quality > 2 ? 2 : quality); }
 
     void shutdown();
 
@@ -36,6 +37,7 @@ private:
     Shader   vhsShader_;
     int      width_  = 0;
     int      height_ = 0;
+    int      quality_ = 2;
 
     void createFbo();
     void destroyFbo();
