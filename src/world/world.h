@@ -31,4 +31,8 @@ public:
 private:
     unsigned int worldSeed_;
     std::unordered_map<uint64_t, Chunk> chunks_;
+
+    // Lamp list and shadow polygons survive across frames.
+    mutable bool lightsDirty_ = true;
+    mutable std::vector<Light> cachedLights_;
 };
