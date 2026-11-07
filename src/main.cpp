@@ -11,6 +11,7 @@
 #include "player/player.h"
 #include "audio/audio.h"
 #include "core/graphics_settings.h"
+#include "core/save_system.h"
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
@@ -27,9 +28,11 @@ constexpr float MOUSE_SENS = 0.08f;
 int main(int argc, char** argv) {
     Logger::init();
     LOG("=== Backrooms - VHS ===");
-    unsigned int seed = (unsigned int)time(nullptr);
+    SaveData saveData;
+    const bool hasSave = (argc <= 1) && SaveSystem::Load(saveData);
+    unsigned int seed = hasSave ? saveData.worldSeed : (unsigned int)time(nullptr);
     if (argc > 1) seed = (unsigned int)atoi(argv[1]);
-    LOG("Seed: %u", seed);
+    LOG("Seed: %u%s", seed, hasSave ? " (loaded)" : "");
 
     if (!SDL_Init(SDL_INIT_VIDEO)) { LOG("SDL_Init failed: %s", SDL_GetError()); Logger::close(); return 1; }
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
@@ -59,10 +62,13 @@ int main(int argc, char** argv) {
     SDL_RaiseWindow(window);
 
     World world(seed);
-    world.loadAround(16.5f, 16.5f, graphicsSettings.viewDistance);
+    if (hasSave) world.applyModifiedBlocks(saveData.modifiedBlocks);
+    const float initialX = hasSave ? saveData.playerPosition.x : 16.5f;
+    const float initialZ = hasSave ? saveData.playerPosition.z : 16.5f;
+    world.loadAround(initialX, initialZ, graphicsSettings.viewDistance);
 
-    float spawnX = 16.5f, spawnY = 16.5f;
-    if (world.findSpawn(16.5f, 16.5f, spawnX, spawnY)) {
+    float spawnX = initialX, spawnY = initialZ;
+    if (!hasSave && world.findSpawn(16.5f, 16.5f, spawnX, spawnY)) {
         LOG("[Spawn] Safe point at (%.1f, %.1f)", spawnX, spawnY);
     } else {
         LOG("[Spawn] WARN: no safe point found");
@@ -74,9 +80,12 @@ int main(int argc, char** argv) {
     renderer.resize(WIN_W, WIN_H);
 
     Player player;
-    player.camera().position().x = spawnX;
-    player.camera().position().y = 1.0f; // <--- Ноги на полу
-    player.camera().position().z = spawnY;
+    player.camera().position() = hasSave ? saveData.playerPosition : glm::vec3(spawnX, 1.0f, spawnY);
+    if (hasSave) {
+        player.camera().setYaw(saveData.yaw);
+        player.camera().setPitch(saveData.pitch);
+        LOG("Save loaded: %zu modified blocks", saveData.modifiedBlocks.size());
+    }
 
     int ccx = (int)std::floor(spawnX / CHUNK_SIZE);
     int ccy = (int)std::floor(spawnY / CHUNK_SIZE);
@@ -191,6 +200,17 @@ int main(int argc, char** argv) {
             frameCount = 0; fpsTimer = now;
         }
     }
+
+    SaveData finalSave;
+    finalSave.worldSeed = world.seed();
+    finalSave.playerPosition = player.camera().position();
+    finalSave.yaw = player.camera().yaw();
+    finalSave.pitch = player.camera().pitch();
+    finalSave.modifiedBlocks = world.modifiedBlocks();
+    if (SaveSystem::Save(finalSave))
+        LOG("Save written: %zu modified blocks", finalSave.modifiedBlocks.size());
+    else
+        LOG("WARNING: failed to write save.dat");
 
     SDL_SetWindowRelativeMouseMode(window, false);
     renderer.shutdown();
