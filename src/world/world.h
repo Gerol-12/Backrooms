@@ -2,10 +2,13 @@
 
 #include "core/types.h"
 #include "world/chunk.h"
+#include "core/save_system.h"
 
 #include <unordered_map>
 #include <vector>
 #include <cstdint>
+#include <map>
+#include <tuple>
 
 class World {
 public:
@@ -15,6 +18,9 @@ public:
     bool isWall(float fx, float fz) const;
 
     Chunk& ensureChunk(int cx, int cy);
+    bool setBlock(int wx, int wy, int wz, uint8_t blockType);
+    void applyModifiedBlocks(const std::vector<ModifiedBlock>& blocks);
+    std::vector<ModifiedBlock> modifiedBlocks() const;
     void loadAround(float wx, float wy, int radius = VIEW_RADIUS);
     void unloadFarFrom(int ccx, int ccy, int radius = VIEW_RADIUS);
 
@@ -32,6 +38,7 @@ public:
 private:
     unsigned int worldSeed_;
     std::unordered_map<uint64_t, Chunk> chunks_;
+    std::map<std::tuple<int32_t,int32_t,int32_t>,uint8_t> modifiedBlocks_;
 
     // Lamp list and shadow polygons survive across frames.
     mutable bool lightsDirty_ = true;
