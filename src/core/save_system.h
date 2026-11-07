@@ -10,6 +10,13 @@
 #include <vector>
 #include <glm/glm.hpp>
 
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
+
 struct ModifiedBlock { int32_t x=0, y=0, z=0; uint8_t blockType=0; };
 struct SaveData {
     uint32_t worldSeed=0;
@@ -42,7 +49,17 @@ public:
         file.flush();
         if (!file.good()) { file.close(); return false; }
         file.close();
+#ifdef _WIN32
+        // Windows rename() does not replace an existing destination file.
+        // MoveFileEx with REPLACE_EXISTING safely promotes the completed temp file.
+        return MoveFileExA(
+            tempPath.c_str(),
+            path.c_str(),
+            MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH
+        ) != 0;
+#else
         return std::rename(tempPath.c_str(),path.c_str())==0;
+#endif
     }
 
     static bool Load(SaveData& data,const std::string& path="save.dat") {
