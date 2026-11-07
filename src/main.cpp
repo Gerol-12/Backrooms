@@ -41,6 +41,10 @@ int main(int argc, char** argv) {
     if (!window) { LOG("SDL_CreateWindow failed"); SDL_Quit(); Logger::close(); return 1; }
     SDL_GLContext glContext = SDL_GL_CreateContext(window);
     if (!glContext) { LOG("SDL_GL_CreateContext failed"); SDL_DestroyWindow(window); SDL_Quit(); Logger::close(); return 1; }
+
+    // Prefer monitor synchronization; keep the software 60 FPS cap as a fallback.
+    const bool vsyncEnabled = SDL_GL_SetSwapInterval(1);
+    LOG("VSync: %s", vsyncEnabled ? "enabled" : "unavailable (using 60 FPS cap)");
     if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) { LOG("glad failed"); SDL_GL_DestroyContext(glContext); SDL_DestroyWindow(window); SDL_Quit(); Logger::close(); return 1; }
 
     LOG("OpenGL Version: %s", glGetString(GL_VERSION));
@@ -147,13 +151,16 @@ int main(int argc, char** argv) {
         renderer.render(world, view, projection, player.camera().eyePosition(), vpW, vpH, timeSec, flashlightOn, currentFlashlightDir, showHitboxes, showChunkBorders);
         SDL_GL_SwapWindow(window);
 
-        // Cap CPU/GPU work to a stable 60 FPS instead of rendering uncapped.
-        const Uint64 frameElapsed = SDL_GetPerformanceCounter() - frameStart;
-        if (frameElapsed < targetFrameTicks) {
-            const Uint64 remainingTicks = targetFrameTicks - frameElapsed;
-            const Uint32 sleepMs = static_cast<Uint32>(
-                (remainingTicks * 1000ULL) / performanceFrequency);
-            if (sleepMs > 0) SDL_Delay(sleepMs);
+        // VSync already paces frames to the display. Use a software 60 FPS cap only
+        // when the driver/renderer cannot enable VSync, avoiding double-throttling.
+        if (!vsyncEnabled) {
+            const Uint64 frameElapsed = SDL_GetPerformanceCounter() - frameStart;
+            if (frameElapsed < targetFrameTicks) {
+                const Uint64 remainingTicks = targetFrameTicks - frameElapsed;
+                const Uint32 sleepMs = static_cast<Uint32>(
+                    (remainingTicks * 1000ULL) / performanceFrequency);
+                if (sleepMs > 0) SDL_Delay(sleepMs);
+            }
         }
 
         frameCount++;
