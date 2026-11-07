@@ -80,8 +80,13 @@ bool Renderer::init(const std::string& assetsPath) {
     return true;
 }
 
+void Renderer::setGraphicsSettings(const GraphicsSettings& settings) {
+    settings_ = settings;
+    post_.setQuality(settings_.vhsQuality);
+}
+
 void Renderer::updateAround(const World& world, int ccx, int ccy) {
-    int radius = 2;
+    const int radius = settings_.viewDistance;
 
     for (int x = ccx - radius; x <= ccx + radius; ++x) {
         for (int y = ccy - radius; y <= ccy + radius; ++y) {
@@ -199,14 +204,19 @@ void Renderer::render(const World& world,
     shader_.setVec3("uCameraPos", glm::value_ptr(cameraPos));
 
 // Туман (делаем его чуть светлее и отодвигаем дальше)
+    const float distanceScale = static_cast<float>(settings_.viewDistance) / 3.0f;
     glm::vec3 fogColor(0.135f, 0.13f, 0.105f);
     shader_.setVec3("uFogColor", glm::value_ptr(fogColor));
-    shader_.setFloat("uFogStart", 5.0f);
-    shader_.setFloat("uFogEnd", 22.0f);
+    shader_.setFloat("uFogStart", 5.0f * distanceScale);
+    shader_.setFloat("uFogEnd", 22.0f * distanceScale);
 
     // Базовый свет (поднимаем, чтобы даже в тенях были видны очертания стен)
-    glm::vec3 ambient(0.085f, 0.080f, 0.066f);
+    const float ambientLevel[] = { 0.105f, 0.092f, 0.080f };
+    glm::vec3 ambient(ambientLevel[settings_.lightingQuality],
+                      ambientLevel[settings_.lightingQuality] * 0.94f,
+                      ambientLevel[settings_.lightingQuality] * 0.78f);
     shader_.setVec3("uAmbient", glm::value_ptr(ambient));
+    shader_.setInt("uLightingQuality", settings_.lightingQuality);
     shader_.setFloat("uTime", timeSeconds);
 
     // Фонарик
@@ -214,8 +224,12 @@ void Renderer::render(const World& world,
     shader_.setVec3("uFlashlightDir", glm::value_ptr(flashlightDir));
 
     // --- СВЕТ ОТ ЛАМП ---
-    std::vector<Light> lights = world.collectLights(cameraPos.x, cameraPos.z, 25.0f);
-    int numLights = std::min((int)lights.size(), MAX_LIGHTS);
+    const float lightSearchDistance[] = { 15.0f, 20.0f, 25.0f };
+    const int lightBudget[] = { 4, 8, MAX_LIGHTS };
+    std::vector<Light> lights = world.collectLights(
+        cameraPos.x, cameraPos.z, lightSearchDistance[settings_.lightingQuality],
+        lightBudget[settings_.lightingQuality]);
+    int numLights = std::min((int)lights.size(), lightBudget[settings_.lightingQuality]);
     shader_.setInt("uLightCount", numLights);
 
     if (numLights > 0) {
@@ -259,9 +273,8 @@ void Renderer::render(const World& world,
     visibleChunks.reserve(meshes_.size());
 
     const glm::mat4 viewProjection = projection * view;
-    constexpr float MAX_RENDER_DISTANCE = CHUNK_SIZE * 3.0f;
-    constexpr float MAX_RENDER_DISTANCE2 =
-        MAX_RENDER_DISTANCE * MAX_RENDER_DISTANCE;
+    const float maxRenderDistance = CHUNK_SIZE * static_cast<float>(settings_.viewDistance);
+    const float maxRenderDistance2 = maxRenderDistance * maxRenderDistance;
 
     for (const auto &pair : meshes_) {
         const int cx = decodeChunkCoordinate(
@@ -286,7 +299,7 @@ void Renderer::render(const World& world,
         const float dx = cameraPos.x - closestX;
         const float dz = cameraPos.z - closestZ;
 
-        if (dx * dx + dz * dz > MAX_RENDER_DISTANCE2)
+        if (dx * dx + dz * dz > maxRenderDistance2)
             continue;
 
         if (!isAABBVisible(viewProjection, minPoint, maxPoint))
