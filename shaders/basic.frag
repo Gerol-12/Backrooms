@@ -22,6 +22,7 @@ uniform float uLightIntens[MAX_LIGHTS];
 uniform int uLightPolyN[MAX_LIGHTS];
 uniform float uLightPoly[MAX_LIGHTS * MAX_POLY_POINTS];
 uniform vec3 uAmbient;
+uniform int uLightingQuality;
 uniform float uMaterialLight;
 uniform float uEmissive;
 uniform float uTime;
@@ -56,7 +57,7 @@ void main() {
             if (dist > maxRadius) continue;
 
             float shadow = 1.0;
-            int polyN = uLightPolyN[i];
+            int polyN = (uLightingQuality == 0) ? 0 : uLightPolyN[i];
             if (polyN > 0) {
                 float ang = atan(rel.y, rel.x);
                 if (ang < 0.0) ang += 6.2831853;
