@@ -112,6 +112,7 @@ void PostProcess::endSceneAndDraw(float time) {
     vhsShader_.setFloat("uTime", time);
     vhsShader_.setFloat("uResolutionX", (float)width_);
     vhsShader_.setFloat("uResolutionY", (float)height_);
+    vhsShader_.setInt("uVhsQuality", quality_);
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, colorTex_);
