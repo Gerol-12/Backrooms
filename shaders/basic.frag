@@ -78,7 +78,7 @@ void main() {
             vec3 lampColor = uLightColor[i] * vec3(0.96, 0.98, 0.88);
 
             // Снижаем интенсивность, сохраняя заметные световые пятна.
-            float currentIntensity = uLightIntens[i] * 0.95;
+            float currentIntensity = uLightIntens[i] * 0.68;
             float timeNoise = hash(floor(uTime * 2.5) + float(i) * 17.0);
             if (timeNoise > 0.95) {
                 currentIntensity *= 0.3;
