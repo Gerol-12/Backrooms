@@ -9,6 +9,7 @@
                 "-fdiagnostics-color=always",
                 "-g",
                 "${workspaceFolder}/src/main.cpp",
+                "${workspaceFolder}/src/intro/intro_sequence.cpp",
                 "${workspaceFolder}/src/audio/audio.cpp",
                 "${workspaceFolder}/src/player/player.cpp",
                 "${workspaceFolder}/src/player/camera.cpp",
