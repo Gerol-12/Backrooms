@@ -59,7 +59,7 @@ int main(int argc, char** argv) {
     SDL_RaiseWindow(window);
 
     World world(seed);
-    world.loadAround(16.5f, 16.5f);
+    world.loadAround(16.5f, 16.5f, graphicsSettings.viewDistance);
 
     float spawnX = 16.5f, spawnY = 16.5f;
     if (world.findSpawn(16.5f, 16.5f, spawnX, spawnY)) {
@@ -70,6 +70,7 @@ int main(int argc, char** argv) {
 
     Renderer renderer;
     if (!renderer.init("assets/")) { LOG("Renderer init failed"); return 1; }
+    renderer.setGraphicsSettings(graphicsSettings);
     renderer.resize(WIN_W, WIN_H);
 
     Player player;
@@ -138,8 +139,8 @@ int main(int argc, char** argv) {
         ccx = (int)std::floor(player.camera().position().x / CHUNK_SIZE);
         ccy = (int)std::floor(player.camera().position().z / CHUNK_SIZE);
         if (ccx != lastCCX || ccy != lastCCY) {
-            world.loadAround(player.camera().position().x, player.camera().position().z);
-            world.unloadFarFrom(ccx, ccy);
+            world.loadAround(player.camera().position().x, player.camera().position().z, graphicsSettings.viewDistance);
+            world.unloadFarFrom(ccx, ccy, graphicsSettings.viewDistance);
             renderer.updateAround(world, ccx, ccy);
             lastCCX = ccx; lastCCY = ccy;
         }
