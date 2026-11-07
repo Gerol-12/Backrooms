@@ -7,9 +7,55 @@
 #include <cmath>
 #include <vector>
 #include <algorithm>
+#include <cstdint>
 
 #define MAX_LIGHTS 12
 #define MAX_POLY_POINTS 240
+
+namespace {
+    // OpenGL clip-space frustum test for an axis-aligned chunk bounding box.
+    bool isAABBVisible(
+        const glm::mat4 &viewProjection,
+        const glm::vec3 &minPoint,
+        const glm::vec3 &maxPoint)
+    {
+        const glm::vec4 row0(
+            viewProjection[0][0], viewProjection[1][0],
+            viewProjection[2][0], viewProjection[3][0]);
+        const glm::vec4 row1(
+            viewProjection[0][1], viewProjection[1][1],
+            viewProjection[2][1], viewProjection[3][1]);
+        const glm::vec4 row2(
+            viewProjection[0][2], viewProjection[1][2],
+            viewProjection[2][2], viewProjection[3][2]);
+        const glm::vec4 row3(
+            viewProjection[0][3], viewProjection[1][3],
+            viewProjection[2][3], viewProjection[3][3]);
+
+        const glm::vec4 planes[6] = {
+            row3 + row0, row3 - row0,
+            row3 + row1, row3 - row1,
+            row3 + row2, row3 - row2
+        };
+
+        for (const glm::vec4 &plane : planes) {
+            const glm::vec3 positiveVertex(
+                plane.x >= 0.0f ? maxPoint.x : minPoint.x,
+                plane.y >= 0.0f ? maxPoint.y : minPoint.y,
+                plane.z >= 0.0f ? maxPoint.z : minPoint.z
+            );
+
+            if (glm::dot(glm::vec3(plane), positiveVertex) + plane.w < 0.0f)
+                return false;
+        }
+
+        return true;
+    }
+
+    int decodeChunkCoordinate(uint32_t value) {
+        return static_cast<int>(static_cast<int32_t>(value));
+    }
+}
 
 bool Renderer::init(const std::string& assetsPath) {
     assetsPath_ = assetsPath;
@@ -49,8 +95,8 @@ void Renderer::updateAround(const World& world, int ccx, int ccy) {
     }
 
     for (auto it = meshes_.begin(); it != meshes_.end(); ) {
-        int cx = (int)(it->first >> 32);
-        int cy = (int)(it->first & 0xFFFFFFFF);
+        int cx = decodeChunkCoordinate(static_cast<uint32_t>(it->first >> 32));
+        int cy = decodeChunkCoordinate(static_cast<uint32_t>(it->first & 0xFFFFFFFFu));
 
         if (std::abs(cx - ccx) > radius || std::abs(cy - ccy) > radius) {
             it = meshes_.erase(it);
@@ -173,15 +219,23 @@ void Renderer::render(const World& world,
     shader_.setInt("uLightCount", numLights);
 
     if (numLights > 0) {
-        std::vector<float> posData, colorData, radiusData, intensData;
+        std::vector<float> posData, colorData, radiusData, intensData, polyData;
         std::vector<int> polyNData;
+        polyData.reserve(static_cast<size_t>(numLights) * MAX_POLY_POINTS);
 
         for (int i = 0; i < numLights; ++i) {
             posData.insert(posData.end(), {lights[i].position.x, lights[i].position.y, lights[i].position.z});
             colorData.insert(colorData.end(), {lights[i].color.r, lights[i].color.g, lights[i].color.b});
             radiusData.push_back(lights[i].radius);
             intensData.push_back(lights[i].intensity);
-            polyNData.push_back(0);
+            polyNData.push_back(lights[i].polyCount);
+            for (int p = 0; p < MAX_POLY_POINTS; ++p) {
+                polyData.push_back(
+                    p < lights[i].polyCount
+                        ? lights[i].polyDist[p]
+                        : lights[i].radius
+                );
+            }
         }
 
         shader_.setVec3Array("uLightPos", posData.data(), numLights);
@@ -189,28 +243,78 @@ void Renderer::render(const World& world,
         shader_.setFloatArray("uLightRadius", radiusData.data(), numLights);
         shader_.setFloatArray("uLightIntens", intensData.data(), numLights);
         shader_.setIntArray("uLightPolyN", polyNData.data(), numLights);
+        shader_.setFloatArray(
+            "uLightPoly",
+            polyData.data(),
+            numLights * MAX_POLY_POINTS
+        );
     }
 
-    // --- ОТРИСОВКА СЦЕНЫ ---
+    // --- VISIBILITY PASS: distance + frustum culling ---
+    struct VisibleChunk {
+        const ChunkMesh *mesh;
+    };
+
+    std::vector<VisibleChunk> visibleChunks;
+    visibleChunks.reserve(meshes_.size());
+
+    const glm::mat4 viewProjection = projection * view;
+    constexpr float MAX_RENDER_DISTANCE = CHUNK_SIZE * 3.0f;
+    constexpr float MAX_RENDER_DISTANCE2 =
+        MAX_RENDER_DISTANCE * MAX_RENDER_DISTANCE;
+
+    for (const auto &pair : meshes_) {
+        const int cx = decodeChunkCoordinate(
+            static_cast<uint32_t>(pair.first >> 32));
+        const int cz = decodeChunkCoordinate(
+            static_cast<uint32_t>(pair.first & 0xFFFFFFFFu));
+
+        const float minX = static_cast<float>(cx * CHUNK_SIZE);
+        const float minZ = static_cast<float>(cz * CHUNK_SIZE);
+        const glm::vec3 minPoint(minX, 0.0f, minZ);
+        const glm::vec3 maxPoint(
+            minX + CHUNK_SIZE,
+            5.0f,
+            minZ + CHUNK_SIZE
+        );
+
+        // Distance to the closest point of the chunk's XZ rectangle.
+        const float closestX = std::max(minPoint.x,
+            std::min(cameraPos.x, maxPoint.x));
+        const float closestZ = std::max(minPoint.z,
+            std::min(cameraPos.z, maxPoint.z));
+        const float dx = cameraPos.x - closestX;
+        const float dz = cameraPos.z - closestZ;
+
+        if (dx * dx + dz * dz > MAX_RENDER_DISTANCE2)
+            continue;
+
+        if (!isAABBVisible(viewProjection, minPoint, maxPoint))
+            continue;
+
+        visibleChunks.push_back({ &pair.second });
+    }
+
+    // --- DRAW PASS: keep material changes grouped to minimize state changes ---
     shader_.setInt("uTex", 0);
     shader_.setFloat("uEmissive", 0.0f);
 
-    // 1. Пол
     texFloor_.bind(0);
-    for (auto& pair : meshes_) pair.second.floor.draw();
+    for (const VisibleChunk &chunk : visibleChunks)
+        chunk.mesh->floor.draw();
 
-    // 2. Стены
     texWall_.bind(0);
-    for (auto& pair : meshes_) pair.second.wall.draw();
+    for (const VisibleChunk &chunk : visibleChunks)
+        chunk.mesh->wall.draw();
 
-    // 3. Потолок
     texCeil_.bind(0);
-    for (auto& pair : meshes_) pair.second.ceil.draw();
+    for (const VisibleChunk &chunk : visibleChunks)
+        chunk.mesh->ceil.draw();
 
-    // 4. Лампы
     texLamp_.bind(0);
     shader_.setFloat("uEmissive", 1.0f);
-    for (auto& pair : meshes_) pair.second.lamp.draw();
+    for (const VisibleChunk &chunk : visibleChunks)
+        chunk.mesh->lamp.draw();
 
     // --- ОТЛАДКА (F3 + G) ---
     // Возвращаем заливку для линий, если был включен Wireframe
