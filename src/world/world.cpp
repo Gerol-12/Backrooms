@@ -49,6 +49,32 @@ Chunk &World::ensureChunk(int cx, int cy) {
     return res.first->second;
 }
 
+
+bool World::setBlock(int wx,int wy,int wz,uint8_t blockType) {
+    if (wy<0 || wy>=CHUNK_HEIGHT) return false;
+    const int cx=static_cast<int>(std::floor(static_cast<float>(wx)/CHUNK_SIZE));
+    const int cz=static_cast<int>(std::floor(static_cast<float>(wz)/CHUNK_SIZE));
+    Chunk& chunk=ensureChunk(cx,cz);
+    const int lx=wx-cx*CHUNK_SIZE, lz=wz-cz*CHUNK_SIZE;
+    if (chunk.at(lx,wy,lz)==blockType) return true;
+    chunk.at(lx,wy,lz)=blockType;
+    modifiedBlocks_[std::make_tuple(wx,wy,wz)]=blockType;
+    lightsDirty_=true;
+    return true;
+}
+
+void World::applyModifiedBlocks(const std::vector<ModifiedBlock>& blocks) {
+    for (const auto& b:blocks) setBlock(b.x,b.y,b.z,b.blockType);
+}
+
+std::vector<ModifiedBlock> World::modifiedBlocks() const {
+    std::vector<ModifiedBlock> result;
+    result.reserve(modifiedBlocks_.size());
+    for (const auto& e:modifiedBlocks_)
+        result.push_back({std::get<0>(e.first),std::get<1>(e.first),std::get<2>(e.first),e.second});
+    return result;
+}
+
 void World::loadAround(float wx, float wy, int radius) {
     int ccx = (int)std::floor(wx / CHUNK_SIZE);
     int ccy = (int)std::floor(wy / CHUNK_SIZE);
