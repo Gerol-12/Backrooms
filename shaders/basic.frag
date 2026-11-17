@@ -43,7 +43,6 @@ void main() {
         color = base.rgb * vec3(1.05, 1.03, 0.96);
     } else {
         // Убираем чрезмерный жёлтый сдвиг исходных текстур.
-        base.rgb *= vec3(0.99, 0.97, 0.91);
         vec3 lighting = uAmbient;
         float bounce = max(0.0, N.y) * 0.045;
         lighting += vec3(bounce) * vec3(0.85, 0.82, 0.72);
@@ -77,7 +76,7 @@ void main() {
             float NdotL = max(dot(N, L), 0.0);
             float t = 1.0 - (dist / maxRadius);
             float atten = t * t;
-            vec3 lampColor = uLightColor[i] * vec3(0.96, 0.98, 0.88);
+            vec3 lampColor = uLightColor[i];
 
             // Снижаем интенсивность, сохраняя заметные световые пятна.
             float currentIntensity = uLightIntens[i] * 0.52;

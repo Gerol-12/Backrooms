@@ -99,10 +99,14 @@ void PostProcess::resize(int width, int height) {
 void PostProcess::beginScene() {
     glBindFramebuffer(GL_FRAMEBUFFER, fbo_);
     glViewport(0, 0, width_, height_);
+    printf("[Color] FRAMEBUFFER_SRGB: %s\n",
+    glIsEnabled(GL_FRAMEBUFFER_SRGB) ? "ON" : "OFF");
 }
 
 void PostProcess::endSceneAndDraw(float time) {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    printf("[Color] Default framebuffer sRGB: %s\n",
+    glIsEnabled(GL_FRAMEBUFFER_SRGB) ? "ON" : "OFF");
     glViewport(0, 0, width_, height_);
 
     glDisable(GL_DEPTH_TEST);

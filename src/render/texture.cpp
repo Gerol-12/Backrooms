@@ -43,10 +43,10 @@ bool Texture::loadFromFile(const std::string& path) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
-                 (GLsizei)w, (GLsizei)h, 0,
-                 GL_RGBA, GL_UNSIGNED_BYTE,
-                 pixels.data());
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB8_ALPHA8,
+             (GLsizei)w, (GLsizei)h, 0,
+             GL_RGBA, GL_UNSIGNED_BYTE,
+             pixels.data());
     glGenerateMipmap(GL_TEXTURE_2D);
 
     glBindTexture(GL_TEXTURE_2D, 0);

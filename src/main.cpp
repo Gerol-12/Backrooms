@@ -46,6 +46,13 @@ int main(int argc, char** argv) {
     SDL_GLContext glContext = SDL_GL_CreateContext(window);
     if (!glContext) { LOG("SDL_GL_CreateContext failed"); SDL_DestroyWindow(window); SDL_Quit(); Logger::close(); return 1; }
 
+    int srgbCapable = 0;
+    if (SDL_GL_GetAttribute(SDL_GL_FRAMEBUFFER_SRGB_CAPABLE, &srgbCapable) == 0) {
+        LOG("Default framebuffer sRGB capable: %d", srgbCapable);
+    } else {
+        LOG("Could not query sRGB capability: %s", SDL_GetError());
+    }
+
     GraphicsSettings graphicsSettings = GraphicsSettings::load();
     // Prefer the configured monitor synchronization; retain a frame cap as fallback.
     const bool vsyncEnabled = graphicsSettings.vsync && SDL_GL_SetSwapInterval(1);
@@ -54,6 +61,18 @@ int main(int argc, char** argv) {
         graphicsSettings.viewDistance, graphicsSettings.lightingQuality, graphicsSettings.vhsQuality);
     if (!graphicsSettings.vsync) SDL_GL_SetSwapInterval(0);
     if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) { LOG("glad failed"); SDL_GL_DestroyContext(glContext); SDL_DestroyWindow(window); SDL_Quit(); Logger::close(); return 1; }
+
+    GLint srgb = 0;
+
+    glGetFramebufferAttachmentParameteriv(
+        GL_FRAMEBUFFER,
+        GL_BACK_LEFT,
+        GL_FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING,
+        &srgb
+    );
+
+    LOG("Default framebuffer color encoding: %s",
+        srgb == GL_SRGB ? "sRGB" : "LINEAR");
 
     LOG("OpenGL Version: %s", glGetString(GL_VERSION));
     glEnable(GL_DEPTH_TEST);

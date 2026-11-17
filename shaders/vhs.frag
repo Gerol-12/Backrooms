@@ -55,5 +55,11 @@ void main() {
     float vignette = clamp(1.0 - dot(vUV2 * 0.85, vUV2 * 0.85), 0.0, 1.0);
     color *= mix(0.58, 1.0, vignette);
 
-    FragColor = vec4(color, 1.0);
+    vec3 srgb = mix(
+    color * 12.92,
+    1.055 * pow(max(color, vec3(0.0)), vec3(1.0 / 2.4)) - 0.055,
+    step(vec3(0.0031308), color)
+    );
+
+    FragColor = vec4(srgb, 1.0);
 }
